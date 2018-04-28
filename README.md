@@ -113,6 +113,54 @@ config :shoehorn,
   app: :your_app
 ```
 
+# Subscribing to Network events
+Calling `setup` won't give you errors such as if your pre shared key is incorrect.
+```elixir
+iex()> Nerves.Network.setup("wlan0", [subscribe: true, ssid: "CorrectSSID", psk: "WRONG!!!123"])
+iex()> flush()
+{Nerves.Network, Nerves.WpaSupplicant, {{:INFO, "WPA: 4-Way Handshake failed - pre-shared key may be incorrect"}, %{ifname: "wlan0"}}}
+
+# Input the correct key
+iex()> Nerves.Network.setup("wlan0", [ssid: "CorrectSSID", psk: "CorrectPSKThisTime"])
+iex()> flush()
+{Nerves.Network, Nerves.Udhcpc,
+ {:bound, %{
+    ifname: "wlan0",
+    ipv4_address: "192.168.1.100",
+    ipv4_broadcast: "192.168.1.255",
+    ipv4_gateway: "192.168.1.1",
+    ipv4_subnet_mask: "255.255.255.0",
+    nameservers: ["192.168.1.1"]
+  }}}
+
+```
+After `subscribe`ing, You will receive messages in the shape of:
+```elixir
+  {Nerves.Network, event_module, {event, data}}
+```
+where `event_module` is one of
+* `Nerves.NetworkInterface`
+* `Nerves.Udhcpc`
+* `Nerves.WpaSupplicant` (only for wireless interfaces.)
+
+Each of these modules have a different set of `event`s. This is a list of some
+of the most common/useful ones.
+## `Nerves.NetworkInterface`
+* `ifadded`
+* `ifmoved`
+* `ifremoved`
+
+## `Nerves.Udhcpc`
+* `bound`
+* `leasefail`
+* `deconfig`
+* `renew`
+
+## `Nerves.WpaSupplicant` (only for wireless interfaces.)
+* `:"CTRL-EVENT-CONNECTED"`
+* `:"CTRL-EVENT-DISCONNECTED"`
+* `{:INFO, message}`
+
 ## Limitations
 
 Currently, only IPv4 is supported. The library is incredibly verbose in its

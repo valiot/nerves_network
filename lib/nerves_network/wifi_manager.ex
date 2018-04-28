@@ -41,6 +41,7 @@ defmodule Nerves.Network.WiFiManager do
     Logger.info("WiFiManager(#{ifname}) starting")
     Logger.info("Register Nerves.NetworkInterface #{inspect(ifname)}")
     # Register for nerves_network_interface events and udhcpc events
+    # NOTE: This is Elixir.Registry, not SystemRegistry.
     {:ok, _} = Registry.register(Nerves.NetworkInterface, ifname, [])
 
     # check for DHCP here.
@@ -193,18 +194,8 @@ defmodule Nerves.Network.WiFiManager do
     {:reply, results, s}
   end
 
-  # # DHCP events
-  # # :bound, :renew, :deconfig, :nak
-  def handle_info({Nerves.Udhcpc, _, info} = event, %{ifname: ifname} = s) do
-    Logger.info("DHCPManager(#{ifname}) udhcpc #{inspect(event)}")
-    scope(ifname) |> SystemRegistry.update(info)
-    event = handle_registry_event(event)
-    s = consume(s.context, event, s)
-    {:noreply, s}
-  end
-
-  def handle_info({registry, _, ifstate} = event, %{ifname: ifname} = s)
-      when registry in [Nerves.NetworkInterface, Nerves.WpaSupplicant] do
+  def handle_info({registry, _notif, ifstate} = event, %{ifname: ifname} = s)
+      when registry in [Nerves.NetworkInterface, Nerves.WpaSupplicant, Nerves.Udhcpc] do
     event = handle_registry_event(event)
     scope(ifname) |> SystemRegistry.update(ifstate)
 
@@ -212,8 +203,7 @@ defmodule Nerves.Network.WiFiManager do
       "#{inspect(registry)} - WiFiManager(#{ifname}, #{s.context}) got event #{inspect(event)}"
     )
 
-    s = consume(s.context, event, s)
-    {:noreply, s}
+    {:noreply, consume(s.context, event, s)}
   end
 
   def handle_info(event, s) do

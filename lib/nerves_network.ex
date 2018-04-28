@@ -49,17 +49,26 @@ defmodule Nerves.Network do
   See `t(#{__MODULE__}.setup_setting)` for more info.
   """
   @spec setup(Types.ifname(), setup_settings) :: :ok
-  def setup(ifname, settings \\ []) do
+  def setup(ifname, settings \\ []) when is_binary(ifname) when is_list(settings) do
     Logger.debug("#{__MODULE__} setup(#{ifname}, #{inspect(settings)})")
+    {subscribe, settings} = Keyword.pop(settings, :subscribe, false)
+
+    if subscribe do
+      Nerves.Network.Subscription.subscribe(ifname)
+    end
+
     {:ok, {_new, _old}} = Nerves.Network.Config.put(ifname, settings)
     :ok
   end
+
+  @doc "Subscribe to network events."
+  defdelegate subscribe(ifname), to: Nerves.Network.Subscription
 
   @doc """
   Stop all control of `ifname`
   """
   @spec teardown(Types.ifname()) :: :ok
-  def teardown(ifname) do
+  def teardown(ifname) when is_binary(ifname) do
     Logger.debug("#{__MODULE__} teardown(#{ifname})")
     {:ok, {_new, _old}} = Nerves.Network.Config.drop(ifname)
     :ok
@@ -70,7 +79,7 @@ defmodule Nerves.Network do
   from SystemRegistry.
   """
   @spec status(Types.ifname()) :: Nerves.NetworkInterface.Worker.status() | nil
-  def status(ifname) do
+  def status(ifname) when is_binary(ifname) do
     SystemRegistry.match(:_)
     |> get_in([:state, :network_interface, ifname])
   end
@@ -79,7 +88,7 @@ defmodule Nerves.Network do
   If `ifname` is a wireless LAN, scan for access points.
   """
   @spec scan(Types.ifname()) :: [String.t()] | {:error, any}
-  def scan(ifname) do
+  def scan(ifname) when is_binary(ifname) do
     Nerves.Network.IFSupervisor.scan(ifname)
   end
 

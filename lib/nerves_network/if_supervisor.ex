@@ -1,9 +1,24 @@
 defmodule Nerves.Network.IFSupervisor do
+  @moduledoc false
   use Supervisor
   alias Nerves.Network.Types
   import Nerves.Network.Utils, only: [log_atomized_iface_error: 1]
 
-  @moduledoc false
+  @spec setup(Types.ifname(), Nerves.Network.setup_setting()) :: {:ok, pid} | {:error, term}
+  def setup(ifname, settings) when is_binary(ifname) do
+    pidname = pname(ifname)
+
+    if !Process.whereis(pidname) do
+      manager_module = manager(if_type(ifname), settings)
+      sub_name = Nerves.Network.Subscription.sub_name(ifname)
+      manager_worker = worker(manager_module, [ifname, settings, [name: pidname]], id: pidname)
+      sub_worker = worker(Nerves.Network.Subscription, [ifname, [name: sub_name]], id: sub_name)
+      {:ok, _} = Supervisor.start_child(__MODULE__, manager_worker)
+      {:ok, _} = Supervisor.start_child(__MODULE__, sub_worker)
+    else
+      {:error, :already_added}
+    end
+  end
 
   @spec start_link(GenServer.options()) :: GenServer.on_start()
   def start_link(options \\ []) do
@@ -14,45 +29,22 @@ defmodule Nerves.Network.IFSupervisor do
     {:ok, {{:one_for_one, 10, 3600}, []}}
   end
 
-  @spec setup(Types.ifname() | atom, Nerves.Network.setup_settings()) ::
-          Supervisor.on_start_child()
-  def setup(ifname, settings) when is_atom(ifname) do
-    log_atomized_iface_error(ifname)
-    setup(to_string(ifname), settings)
-  end
-
-  def setup(ifname, settings) do
-    pidname = pname(ifname)
-
-    if !Process.whereis(pidname) do
-      manager_module = manager(if_type(ifname), settings)
-      child = worker(manager_module, [ifname, settings, [name: pidname]], id: pidname)
-      Supervisor.start_child(__MODULE__, child)
-    else
-      {:error, :already_added}
-    end
-  end
-
   @spec teardown(Types.ifname()) :: :ok | {:error, :not_started}
-  def teardown(ifname) do
+  def teardown(ifname) when is_binary(ifname) do
     pidname = pname(ifname)
+    sub_name = Nerves.Network.Subscription.sub_name(ifname)
 
     if Process.whereis(pidname) do
       Supervisor.terminate_child(__MODULE__, pidname)
+      Supervisor.terminate_child(__MODULE__, sub_name)
       Supervisor.delete_child(__MODULE__, pidname)
+      Supervisor.delete_child(__MODULE__, sub_name)
     else
       {:error, :not_started}
     end
   end
 
-  # Support atom interface names to avoid breaking some existing
-  # code. This is a deprecated use of the API.
-  @spec scan(Types.ifname() | atom) :: [String.t()] | {:error, any}
-  def scan(ifname) when is_atom(ifname) do
-    log_atomized_iface_error(ifname)
-    scan(to_string(ifname))
-  end
-
+  @spec scan(Types.ifname()) :: [String.t()] | {:error, any}
   def scan(ifname) when is_binary(ifname) do
     with pid when is_pid(pid) <- Process.whereis(pname(ifname)),
          :wireless <- if_type(ifname) do

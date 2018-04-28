@@ -51,7 +51,7 @@ defmodule Nerves.Network.Mixfile do
 
   defp deps do
     [
-      {:system_registry, "~> 0.7"},
+      {:system_registry, "~> 0.8"},
       {:nerves_network_interface, "~> 0.4.4"},
       {:nerves_wpa_supplicant, "~> 0.3.2"},
       {:elixir_make, "~> 0.4", runtime: false},

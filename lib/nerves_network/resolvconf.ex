@@ -95,7 +95,7 @@ defmodule Nerves.Network.Resolvconf do
   ## GenServer
 
   @typedoc "State of the server."
-  @type state :: %{ifname: Types.ifname(), ifmap: ifmap}
+  @type state :: map
 
   def init(filename) do
     state = %{filename: filename, ifmap: %{}}
