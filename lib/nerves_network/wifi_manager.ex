@@ -397,13 +397,9 @@ defmodule Nerves.Network.WiFiManager do
 
   defp parse_settings(settings) when is_list(settings) do
     settings
-    |> Map.new()
-    |> Map.take([:ssid, :key_mgmt, :psk])
-    |> parse_settings
-  end
-
-  defp parse_settings(settings = %{key_mgmt: key_mgmt}) when is_binary(key_mgmt) do
-    %{settings | key_mgmt: String.to_atom(key_mgmt)}
+    |> Map.new(fn({key, val}) ->
+      {String.to_atom(to_string(key)), val}
+    end)
     |> parse_settings
   end
 
