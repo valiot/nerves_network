@@ -410,7 +410,7 @@ defmodule Nerves.Network.WiFiManager do
     # Detect when the user specifies no WiFi security but supplies a
     # key anyway. This confuses wpa_supplicant and causes the failure
     # described in #39.
-    Keyword.delete(:key_mgmt, :NONE)
+    |> Keyword.delete(:key_mgmt, :NONE)
   end
 
   @spec stop_udhcpc(t) :: t
