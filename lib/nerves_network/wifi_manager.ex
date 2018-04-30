@@ -400,6 +400,8 @@ defmodule Nerves.Network.WiFiManager do
     |> Map.new(fn({key, val}) ->
       {String.to_atom(to_string(key)), val}
     end)
+    |> Map.take([:ssid, :key_mgmt, :proto, :psk, :bssid, :mode, :frequency])
+    |> Map.take([:wep_tx_keyidx, :wep_key0, :wep_key1, :wep_key2, :wep_key3])
     |> parse_settings
   end
 
