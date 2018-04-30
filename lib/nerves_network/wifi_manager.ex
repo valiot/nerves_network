@@ -36,7 +36,7 @@ defmodule Nerves.Network.WiFiManager do
     GenServer.start_link(__MODULE__, {ifname, settings}, opts)
   end
 
-  def init({ifname, settings}) do
+  def init({ifname, settings}) when is_list(settings) do
     # Make sure that the interface is enabled or nothing will work.
     Logger.info("WiFiManager(#{ifname}) starting")
     Logger.info("Register Nerves.NetworkInterface #{inspect(ifname)}")
@@ -397,23 +397,16 @@ defmodule Nerves.Network.WiFiManager do
 
   defp parse_settings(settings) when is_list(settings) do
     settings
-    |> Map.new(fn({key, val}) ->
+    |> Enum.map(fn({key, val}) ->
       {String.to_atom(to_string(key)), val}
     end)
-    |> Map.take([:ssid, :key_mgmt, :proto, :psk, :bssid, :mode, :frequency])
-    |> Map.take([:wep_tx_keyidx, :wep_key0, :wep_key1, :wep_key2, :wep_key3])
-    |> parse_settings
+    |> Keyword.take([:ssid, :key_mgmt, :proto, :psk, :bssid, :mode, :frequency])
+    |> Keyword.take([:wep_tx_keyidx, :wep_key0, :wep_key1, :wep_key2, :wep_key3])
+    # Detect when the user specifies no WiFi security but supplies a
+    # key anyway. This confuses wpa_supplicant and causes the failure
+    # described in #39.
+    Keyword.delete(:key_mgmt, :NONE)
   end
-
-  # Detect when the use specifies no WiFi security but supplies a
-  # key anyway. This confuses wpa_supplicant and causes the failure
-  # described in #39.
-  defp parse_settings(settings = %{key_mgmt: :NONE, psk: _psk}) do
-    Map.delete(settings, :psk)
-    |> parse_settings
-  end
-
-  defp parse_settings(settings), do: settings
 
   @spec stop_udhcpc(t) :: t
   defp stop_udhcpc(state) do
