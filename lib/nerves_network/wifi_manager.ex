@@ -399,6 +399,11 @@ defmodule Nerves.Network.WiFiManager do
     settings
     |> Enum.map(fn({key, val}) ->
       {String.to_atom(to_string(key)), val}
+      |> case do
+        # TODO(Connor) This is really ugly.
+        {:key_mgmt, val} -> {:key_mgmt, String.to_atom(to_string(val))}
+        {key, val} -> {key, val}
+      end
     end)
     |> Keyword.take([:ssid, :key_mgmt, :proto, :psk, :bssid, :mode, :frequency])
     |> Keyword.take([:wep_tx_keyidx, :wep_key0, :wep_key1, :wep_key2, :wep_key3])
