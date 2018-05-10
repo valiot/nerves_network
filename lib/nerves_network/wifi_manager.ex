@@ -388,7 +388,7 @@ defmodule Nerves.Network.WiFiManager do
         error ->
           Logger.info(
             "WiFiManager(#{state.ifname}, #{state.context}) wpa_supplicant add_network error: #{
-            inspect(error)
+              inspect(error)
             }"
           )
 
@@ -403,14 +403,15 @@ defmodule Nerves.Network.WiFiManager do
 
   defp parse_settings(networks: networks) do
     networks
-    |> Enum.map(fn(network) -> Map.new(network) end)
+    |> Enum.map(fn network -> Map.new(network) end)
   end
 
   defp parse_settings(settings) when is_list(settings) do
-    entry = settings
-    |> Map.new()
-    |> Map.take([:ssid, :key_mgmt, :psk])
-    |> parse_settings
+    entry =
+      settings
+      |> Map.new()
+      |> Map.take([:ssid, :key_mgmt, :psk])
+      |> parse_settings
 
     [entry]
   end

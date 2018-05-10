@@ -53,7 +53,8 @@ defmodule Nerves.Network.Mixfile do
     [
       {:system_registry, "~> 0.7"},
       {:nerves_network_interface, "~> 0.4.4"},
-      {:nerves_wpa_supplicant, github: "nerves-project/nerves_wpa_supplicant", branch: "add-network"},
+      {:nerves_wpa_supplicant,
+       github: "nerves-project/nerves_wpa_supplicant", branch: "add-network"},
       {:elixir_make, "~> 0.4", runtime: false},
       {:ex_doc, "~> 0.18", only: :dev, runtime: false},
       {:dialyxir, "~> 0.5", only: :dev, runtime: false}
