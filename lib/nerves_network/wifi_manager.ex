@@ -376,30 +376,43 @@ defmodule Nerves.Network.WiFiManager do
 
     Logger.info("Register Nerves.WpaSupplicant #{inspect(state.ifname)}")
     {:ok, _} = Registry.register(Nerves.WpaSupplicant, state.ifname, [])
-    wpa_supplicant_settings = parse_settings(state.settings)
+    networks = parse_settings(state.settings)
 
-    case Nerves.WpaSupplicant.set_network(pid, wpa_supplicant_settings) do
-      :ok ->
-        :ok
+    Nerves.WpaSupplicant.remove_all_networks(pid)
 
-      error ->
-        Logger.info(
-          "WiFiManager(#{state.ifname}, #{state.context}) wpa_supplicant set_network error: #{
+    for network <- networks do
+      case Nerves.WpaSupplicant.add_network(pid, network) do
+        {:ok, _} ->
+          :ok
+
+        error ->
+          Logger.info(
+            "WiFiManager(#{state.ifname}, #{state.context}) wpa_supplicant add_network error: #{
             inspect(error)
-          }"
-        )
+            }"
+          )
 
-        notify(Nerves.WpaSupplicant, state.ifname, error, %{ifname: state.ifname})
+          notify(Nerves.WpaSupplicant, state.ifname, error, %{ifname: state.ifname})
+      end
     end
+
+    Nerves.WpaSupplicant.reassociate(pid)
 
     %Nerves.Network.WiFiManager{state | wpa_pid: pid}
   end
 
+  defp parse_settings(networks: networks) do
+    networks
+    |> Enum.map(fn(network) -> Map.new(network) end)
+  end
+
   defp parse_settings(settings) when is_list(settings) do
-    settings
+    entry = settings
     |> Map.new()
     |> Map.take([:ssid, :key_mgmt, :psk])
     |> parse_settings
+
+    [entry]
   end
 
   defp parse_settings(settings = %{key_mgmt: key_mgmt}) when is_binary(key_mgmt) do
